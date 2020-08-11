@@ -4,7 +4,7 @@ import React from 'react';
 import CSVReader from 'react-csv-reader';
 
 import './mainForm.styles.scss';
-import { Form, Button, Table } from 'react-bootstrap';
+import { Form, Button, Table, Alert } from 'react-bootstrap';
 
 const papaparseOptions = {
   header: true,
@@ -28,33 +28,63 @@ class MainForm extends React.Component {
 
       this.state = {
           csvData: [{}],
-          token: ''
+          token: '',
+          isGoing: false,
+          response: 'Ups',
+          responseType: 'success'      
       }
     }
 
     getKeys = () => {
-      const keys = Object.keys(this.state.csvData[0]);
-      return keys;
+      try {
+        const keys = Object.keys(this.state.csvData[0]);
+        return keys;
+      } catch (error) {
+        console.log('invalid json format')
+      }
     }
     
     getHeader = () => {
       var keys = this.getKeys();
-      return keys.map((key, index)=>{
-      return <th key={key}>{key.toUpperCase()}</th>
-      })
+        if(keys) {
+          return keys.map((key, index)=>{
+          return <th key={key}>{key.toUpperCase()}</th>
+        })
+      }
     }
 
     getRowsData = () => {
       var items = this.state.csvData;
       var keys = this.getKeys();
-      return items.map((row, index)=>{
-      return <tr key={index}><RenderRow key={index} data={row} keys={keys}/></tr>
-      })
+      try {
+        return items.map((row, index)=>{
+        return <tr key={index}><RenderRow key={index} data={row} keys={keys}/></tr>
+        })
+      } catch (error) {
+        console.log('invalid json format')
+      }
+    }
+
+    handleInputChange = (event) => {
+      console.log(event.target);
+      console.log(event.target.value);
+      console.log(event.target.name);
+      const {name, value} = event.target;
+      if(this.state.isGoing && name === 'csvData') {
+        this.setState({ csvData: JSON.parse(value)})
+      } else {
+        this.setState({ [name]: value });
+      }
+    }
+
+    handleSubmit = async (event) => {
+      event.preventDefault();
+      console.log('olisubmit')
     }
 
 
     render () {       
-        var { csvData, token } = this.state;
+        var { csvData, token, isGoing, response, responseType } = this.state;
         csvData = JSON.stringify(csvData);
         const handleForce = (data, fileInfo) => {
           this.setState({csvData: data});
@@ -62,7 +92,7 @@ class MainForm extends React.Component {
         return(
             <div className="container">
                 
-                <Form className='main-form-form' onSubmit={this.handleSubmit}>
+              <Form className='main-form-form' onSubmit={this.handleSubmit}>
                 <div className="row">
                     <label>Seleccione csv</label>
                 </div>
@@ -75,25 +105,20 @@ class MainForm extends React.Component {
                     />
                   </div>
                   <div className='col xs'>
-                    <label>
-                      <input
-                        name="isGoing"
-                        type="checkbox"
-                        checked={this.state.isGoing}
-                        onChange={this.handleInputChange} />
-                        ' Ingreso manual'
-                    </label>
+                    <Form.Check type="checkbox" label="Ingreso manual" name='isGoing' value={isGoing} onChange={this.handleInputChange}/>
                   </div>
                 </div>
                 <div className="row mt-3">
-                  <Form.Control placeholder='Data' as="textarea" rows="4" value={csvData} />
+                  <Form.Control placeholder='Data' as="textarea" name='csvData' rows="4" value={csvData} onChange={this.handleInputChange} disabled={!isGoing} />
                 </div>
                 <div className="row mt-3">
                   <Form.Control
                     required
+                    name='token'
                     type="text"
                     placeholder="Token"
                     value={token}
+                    onChange={this.handleInputChange}
                   />
                 </div>
                 <div className="row mt-3">
@@ -101,7 +126,7 @@ class MainForm extends React.Component {
                     Upload
                   </Button>
                 </div>
-                </Form>
+              </Form>
                 <div className="row mt-3">
                   <label>Data preview</label>
                   <Table striped bordered hover>  
@@ -112,6 +137,13 @@ class MainForm extends React.Component {
                       {this.getRowsData()}
                     </tbody>
                   </Table>
+                </div>
+                <div className="row mt-3">
+                  { response && 
+                  <Alert variant={responseType}>
+                    {response}
+                  </Alert>
+                  }
                 </div>
             </div>
         )
